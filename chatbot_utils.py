@@ -1,21 +1,30 @@
 import pandas as pd
-import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.linear_model import LogisticRegression
+import joblib
 
-class MHTCETChatbot:
-    def __init__(self, csv_path):
-        self.df = pd.read_csv(csv_path)
-        self.vectorizer = TfidfVectorizer()
-        self.X = self.vectorizer.fit_transform(self.df['query'])
+# Load and preprocess dataset
+def load_data():
+    df = pd.read_csv('mhtcet_chatbot_dataset.csv')
+    questions = df['question']
+    answers = df['answer']
+    return questions, answers
 
-    def get_response(self, user_input):
-        user_vec = self.vectorizer.transform([user_input])
-        similarities = cosine_similarity(user_vec, self.X)
-        max_index = np.argmax(similarities)
-        confidence = np.max(similarities)
+# Train model and save vectorizer and model
+def train_model():
+    questions, answers = load_data()
+    vectorizer = TfidfVectorizer()
+    X = vectorizer.fit_transform(questions)
+    model = LogisticRegression()
+    model.fit(X, answers)
 
-        if confidence < 0.3:
-            return "Sorry, I couldn’t understand that. Can you please rephrase?"
+    joblib.dump(vectorizer, 'vectorizer.pkl')
+    joblib.dump(model, 'chatbot_model.pkl')
 
-        return self.df.iloc[max_index]['response']
+# Predict response
+def get_response(user_input):
+    vectorizer = joblib.load('vectorizer.pkl')
+    model = joblib.load('chatbot_model.pkl')
+    input_vec = vectorizer.transform([user_input])
+    prediction = model.predict(input_vec)[0]
+    return prediction
