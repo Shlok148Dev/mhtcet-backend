@@ -2,45 +2,44 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.linear_model import LogisticRegression
+import joblib
 
-# Initialize Flask app
+# Initialize app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
 # Load dataset
-df = pd.read_csv("mhtcet_chatbot_dataset.csv")
+data = pd.read_csv('mhtcet_chatbot_dataset.csv')
 
-# Prepare questions and answers
-questions = df["question"].fillna("").tolist()
-answers = df["answer"].fillna("").tolist()
+# Prepare data
+questions = data['question']
+answers = data['answer']
 
 # Vectorize questions
 vectorizer = TfidfVectorizer()
 X = vectorizer.fit_transform(questions)
 
-# Route for chatbot query
+# Train model
+model = LogisticRegression()
+model.fit(X, answers)
+
+# Route to test chatbot
 @app.route('/ask', methods=['POST'])
 def ask():
-    data = request.json
-    user_query = data.get("question", "")
+    user_input = request.json.get('question')
+    if not user_input:
+        return jsonify({'error': 'No question provided'}), 400
 
-    if not user_query:
-        return jsonify({"answer": "Please ask a valid question."})
+    input_vec = vectorizer.transform([user_input])
+    response = model.predict(input_vec)[0]
 
-    # Transform user query into vector
-    user_vec = vectorizer.transform([user_query])
-    similarities = cosine_similarity(user_vec, X)
-    best_match_index = similarities.argmax()
-    best_score = similarities[0][best_match_index]
+    return jsonify({'answer': response})
 
-    # Set a similarity threshold
-    if best_score < 0.3:
-        return jsonify({"answer": "Sorry, I couldn't find a good match. Please rephrase your question."})
+# Test route
+@app.route('/')
+def index():
+    return "MHT-CET Chatbot Backend is Live!"
 
-    return jsonify({"answer": answers[best_match_index]})
-
-# Run the app
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
-
+    app.run(debug=True)
