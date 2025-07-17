@@ -6,7 +6,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Train model once at start
-#train_model()
+train_model()
 
 @app.route('/')
 def index():
@@ -24,5 +24,4 @@ def ask():
     return jsonify({'answer': response})
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
+    app.run()
