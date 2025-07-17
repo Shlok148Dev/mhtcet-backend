@@ -1,22 +1,24 @@
 from flask import Flask, request, jsonify
 import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
-data = pd.read_csv("mhtcet_colleges.csv")
+df = pd.read_csv("mhtcet_chatbot_dataset.csv")  # your downloaded CSV
 
-@app.route("/query", methods=["POST"])
-def query():
-    req = request.get_json()
-    percentile = float(req["percentile"])
-    category = req["category"]
-    branch = req["branch"]
+questions = df['question'].tolist()
+answers = df['answer'].tolist()
 
-    result = data[
-        (data["Percentile"] <= percentile) &
-        (data["Category"].str.lower() == category.lower()) &
-        (data["Branch"].str.lower() == branch.lower())
-    ]
+vectorizer = TfidfVectorizer()
+X = vectorizer.fit_transform(questions)
 
-    return jsonify(result.to_dict(orient="records"))
+@app.route("/chat", methods=["POST"])
+def chat():
+    user_input = request.get_json()["query"]
+    user_vec = vectorizer.transform([user_input])
+    similarities = cosine_similarity(user_vec, X)
+    best_match_idx = similarities.argmax()
+    response = answers[best_match_idx]
+    return jsonify({"response": response})
 
 app.run(host="0.0.0.0", port=10000)
