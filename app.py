@@ -6,7 +6,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Train model once at start
-train_model()
+#train_model()
 
 @app.route('/')
 def index():
